@@ -11,7 +11,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MemLogParser {
   // keep track of numChunks
@@ -62,6 +64,9 @@ public class MemLogParser {
       case EVENT:
         System.out.println("timestamp,chunk,req_capacity,norm_capacity,thread");
         break;
+      case NONE:
+        // no output
+        break;
       default:
         System.err.println("Unknown output " + options.output);
         System.exit(-1);
@@ -74,8 +79,18 @@ public class MemLogParser {
     }
 
     // draw data points
-    if (options.draw) {
-      drawGraph(options);
+    switch (options.chart) {
+      case NONE:
+        break;
+      case BAR:
+        drawBarGraph(options);
+        break;
+      case LINE:
+        drawLineGraph(options);
+        break;
+      default:
+        System.err.println("Unkown chart " + options.chart);
+        System.exit(-1);
     }
   }
 
@@ -93,7 +108,7 @@ public class MemLogParser {
    * draws a graph showing the evolution of allocated chunks over time
    * @param options
    */
-  private static void drawGraph(Options options) {
+  private static void drawBarGraph(Options options) {
     final Draw window = new Draw(options.input);
     window.setCanvasSize(1024, 512);
     int num = data.size();
@@ -102,6 +117,23 @@ public class MemLogParser {
       final double x = i * 1.0 / num;
       final double h = ((double) data.get(i)) / max;
       window.filledRectangle(x, h * .5, .25 / num, h * .5);
+    }
+  }
+
+  private static void drawLineGraph(Options options) {
+    final Draw window = new Draw(options.input);
+    window.setCanvasSize(1024, 512);
+    int num = data.size();
+
+    double prevX = 0;
+    double prevY = ((double) data.get(0)) / max;
+    for (int i = 1; i < num; i++) {
+      final double x = i * 1.0 / num;
+      final double h = ((double) data.get(i)) / max;
+      window.line(prevX, prevY, x, h);
+
+      prevX = x;
+      prevY = h;
     }
   }
 
@@ -138,11 +170,16 @@ public class MemLogParser {
         if (firstLine) {
           // extract timestamp
           String[] parts = line.split(" ");
-          String tm = parts[0] + " " + parts[1].split(",")[0];
+          String timestamp;
+          if (options.old) {
+            timestamp = parts[0].substring(1) + " " + parts[1].split(",")[0];
+          } else {
+            timestamp = parts[0] + " " + parts[1].split(",")[0];
+          }
           try {
-            current = Timestamp.valueOf(tm);
+            current = Timestamp.valueOf(timestamp);
           } catch (IllegalArgumentException e) {
-            System.err.printf("error parsing '%s'%n", tm);
+            System.err.printf("error parsing '%s'%n", timestamp);
             throw e;
           }
           if (ignore && !current.before(start)) {
@@ -292,13 +329,19 @@ public class MemLogParser {
     String input;
     @Option(name = "-start")
     String start = null;
-    @Option(name = "-draw")
-    boolean draw;
+    @Option(name = "-chart")
+    Graph chart = Graph.NONE;
+    @Option(name = "-old")
+    boolean old;
     @Option(name = "-output")
     Output output = Output.CHUNK;
 
     private enum Output {
-      CHUNK, EVENT
+      NONE, CHUNK, EVENT
+    }
+
+    private enum Graph {
+      NONE, BAR, LINE
     }
   }
 
