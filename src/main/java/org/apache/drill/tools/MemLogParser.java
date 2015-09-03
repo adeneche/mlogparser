@@ -118,6 +118,8 @@ public class MemLogParser {
       final double h = ((double) data.get(i)) / max;
       window.filledRectangle(x, h * .5, .25 / num, h * .5);
     }
+
+    System.out.printf("last/max = %d/%d%n", data.get(num-1) * 16, max * 16);
   }
 
   private static void drawLineGraph(Options options) {
