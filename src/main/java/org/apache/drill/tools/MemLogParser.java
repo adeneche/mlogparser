@@ -1,6 +1,5 @@
 package org.apache.drill.tools;
 
-import edu.princeton.cs.introcs.Draw;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
@@ -11,9 +10,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class MemLogParser {
   // keep track of numChunks
@@ -77,21 +74,6 @@ public class MemLogParser {
     } finally {
       reader.close();
     }
-
-    // draw data points
-    switch (options.chart) {
-      case NONE:
-        break;
-      case BAR:
-        drawBarGraph(options);
-        break;
-      case LINE:
-        drawLineGraph(options);
-        break;
-      default:
-        System.err.println("Unkown chart " + options.chart);
-        System.exit(-1);
-    }
   }
 
   private static void handleEvent(final Timestamp timestamp, final String event) {
@@ -103,40 +85,6 @@ public class MemLogParser {
     final String thread = parts[6].substring(1, parts[6].length() - 1);
 
     System.out.printf("\"%s\",%s,%d,%d,\"%s\"%n", timestamp, hashCode, reqCapacity, normCapacity, thread);
-  }
-  /**
-   * draws a graph showing the evolution of allocated chunks over time
-   * @param options
-   */
-  private static void drawBarGraph(Options options) {
-    final Draw window = new Draw(options.input);
-    window.setCanvasSize(1024, 512);
-    int num = data.size();
-
-    for (int i = 0; i < num; i++) {
-      final double x = i * 1.0 / num;
-      final double h = ((double) data.get(i)) / max;
-      window.filledRectangle(x, h * .5, .25 / num, h * .5);
-    }
-
-    System.out.printf("last/max = %d/%d%n", data.get(num-1) * 16, max * 16);
-  }
-
-  private static void drawLineGraph(Options options) {
-    final Draw window = new Draw(options.input);
-    window.setCanvasSize(1024, 512);
-    int num = data.size();
-
-    double prevX = 0;
-    double prevY = ((double) data.get(0)) / max;
-    for (int i = 1; i < num; i++) {
-      final double x = i * 1.0 / num;
-      final double h = ((double) data.get(i)) / max;
-      window.line(prevX, prevY, x, h);
-
-      prevX = x;
-      prevY = h;
-    }
   }
 
   private static class NettyLogParser {
@@ -331,8 +279,6 @@ public class MemLogParser {
     String input;
     @Option(name = "-start")
     String start = null;
-    @Option(name = "-chart")
-    Graph chart = Graph.NONE;
     @Option(name = "-old")
     boolean old;
     @Option(name = "-output")
@@ -342,9 +288,6 @@ public class MemLogParser {
       NONE, CHUNK, EVENT
     }
 
-    private enum Graph {
-      NONE, BAR, LINE
-    }
   }
 
 }
